@@ -1,0 +1,4 @@
+package: github.com/elek/asfgit2kafka
+import:
+- package: github.com/confluentinc/confluent-kafka-go
+  version: v0.9.4
