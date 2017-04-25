@@ -15,6 +15,7 @@ import (
 )
 
 type KafkaClient struct {
+	live     bool
 	broker   string
 	topic    string
 	producer *kafka.Producer
@@ -26,27 +27,28 @@ func (kafkaClient *KafkaClient) open() {
 
 	if err != nil {
 		fmt.Printf("Failed to create producer: %s\n", err)
-		os.Exit(1)
-	}
+	} else {
+		fmt.Printf("Created Producer %v to %s\n", kafkaClient.producer, kafkaClient.broker)
+		kafkaClient.live = true
+		go func() {
+			for e := range kafkaClient.producer.Events() {
+				switch ev := e.(type) {
+				case *kafka.Message:
+					m := ev
+					if m.TopicPartition.Error != nil {
+						fmt.Printf("Delivery failed: %v\n", m.TopicPartition.Error)
+						kafkaClient.live = false
+					} else {
+						fmt.Printf("Delivered message to topic %s [%d] at offset %v\n",
+							*m.TopicPartition.Topic, m.TopicPartition.Partition, m.TopicPartition.Offset)
+					}
 
-	fmt.Printf("Created Producer %v\n", kafkaClient.producer)
-	go func() {
-		for e := range kafkaClient.producer.Events() {
-			switch ev := e.(type) {
-			case *kafka.Message:
-				m := ev
-				if m.TopicPartition.Error != nil {
-					fmt.Printf("Delivery failed: %v\n", m.TopicPartition.Error)
-				} else {
-					fmt.Printf("Delivered message to topic %s [%d] at offset %v\n",
-						*m.TopicPartition.Topic, m.TopicPartition.Partition, m.TopicPartition.Offset)
+				default:
+					fmt.Printf("Ignored event: %s\n", ev)
 				}
-
-			default:
-				fmt.Printf("Ignored event: %s\n", ev)
 			}
-		}
-	}()
+		}()
+	}
 
 }
 
@@ -55,10 +57,15 @@ func (kafkaClient *KafkaClient) close() {
 }
 
 func (kafkaClient *KafkaClient) sendToKafka(message []byte) {
-	println("pushing event to kafka....")
+	println("Pushing event to kafka....")
+	if ! kafkaClient.live {
+		kafkaClient.close()
+		kafkaClient.open()
+	}
 	kafkaClient.producer.ProduceChannel() <- &kafka.Message{
 		TopicPartition: kafka.TopicPartition{Topic: &kafkaClient.topic, Partition: kafka.PartitionAny},
 		Value:          message}
+	kafkaClient.producer.Flush(100)
 
 }
 
