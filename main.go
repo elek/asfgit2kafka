@@ -100,27 +100,28 @@ func main() {
 			line, err := buffered_reader.ReadBytes('\n')
 
 			if err != nil {
-				log.Fatal("Body is not readable", err)
-			}
-			//
-			var result map[string]interface{}
-			err = json.Unmarshal(line, &result)
-			if err != nil {
-				log.Println("Can't parse json: ", err)
+				log.Println("Body is not readable %s", err)
 			} else {
-				if _, ok := result["stillalive"]; ok {
-					println("stillalive")
+
+				var result map[string]interface{}
+				err = json.Unmarshal(line, &result)
+				if err != nil {
+					log.Println("Can't parse json: %s", err)
 				} else {
-					result["timestamp"] = time.Now().UnixNano()
-					content, err := json.Marshal(result)
-					if err != nil {
-						println("Can't encode line to json: " + err.Error())
+					if _, ok := result["stillalive"]; ok {
+						println("stillalive")
 					} else {
-						println(string(content))
+						result["timestamp"] = time.Now().UnixNano()
+						content, err := json.Marshal(result)
+						if err != nil {
+							println("Can't parse line to json: " + err.Error())
+						} else {
+							println(string(content))
 
-						producer.sendToKafka(content)
-						err = appendTo(*file, content)
+							producer.sendToKafka(content)
+							err = appendTo(*file, content)
 
+						}
 					}
 				}
 			}
