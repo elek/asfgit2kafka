@@ -91,22 +91,23 @@ func main() {
 
 		if err != nil || resp.StatusCode > 400 {
 			print(resp.StatusCode)
-			log.Fatal("Can't get the pubsub feed (Status code: %d): %s", resp.StatusCode, err)
+			log.Printf("Can't get the pubsub feed (Status code: %d): %s\f", resp.StatusCode, err)
+			time.Sleep(time.Second)
 		}
 		defer resp.Body.Close()
 
 		for {
 			buffered_reader := bufio.NewReader(resp.Body)
 			line, err := buffered_reader.ReadBytes('\n')
-
 			if err != nil {
-				log.Println("Body is not readable %s", err)
+				log.Printf("Body is not readable %s\n", err)
+				resp.Body.Close()
+				break
 			} else {
-
 				var result map[string]interface{}
 				err = json.Unmarshal(line, &result)
 				if err != nil {
-					log.Println("Can't parse json: %s", err)
+					log.Printf("Can't parse json: %s\n", err)
 				} else {
 					if _, ok := result["stillalive"]; ok {
 						println("stillalive")
