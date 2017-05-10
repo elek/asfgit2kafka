@@ -64,6 +64,8 @@ func (kafkaClient *KafkaClient) sendToKafka(message []byte) {
 	}
 	kafkaClient.producer.ProduceChannel() <- &kafka.Message{
 		TopicPartition: kafka.TopicPartition{Topic: &kafkaClient.topic, Partition: kafka.PartitionAny},
+		Timestamp: time.Now(),
+		TimestampType: kafka.TimestampCreateTime,
 		Value:          message}
 	kafkaClient.producer.Flush(100)
 
